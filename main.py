@@ -6,6 +6,7 @@ from chatterbox.mtl_tts import ChatterboxMultilingualTTS
 import torch
 import os
 import uvicorn
+import gc
 
 app = FastAPI()
 
@@ -35,18 +36,29 @@ async def generate_tts(request: TTSRequest):
         out_path = "/tmp/output.wav"
         print(f"Generating audio for text: {request.text[:50]}...", flush=True)
         
-        wav = model.generate(
-            request.text, 
-            language_id=request.language_id, 
-            audio_prompt_path=ref_path
-        )
+        with torch.inference_mode():
+            wav = model.generate(
+                request.text, 
+                language_id=request.language_id, 
+                audio_prompt_path=ref_path
+            )
         
         ta.save(out_path, wav.cpu(), model.sr)
-        print("Generation finished and saved.", flush=True)
+        
+        del wav
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
+        
+        print("Generation finished and saved. VRAM cleared.", flush=True)
         
         return FileResponse(out_path, media_type="audio/wav")
+        
     except Exception as e:
         print(f"GEN ERROR: {e}", flush=True)
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

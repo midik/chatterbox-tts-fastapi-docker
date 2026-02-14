@@ -9,6 +9,8 @@ services:
     volumes:
       - ./models:/root/.cache/huggingface
       - ./voices:/voices
+    environment:
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     deploy:
       resources:
         reservations:
