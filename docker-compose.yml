@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  chatterbox-api:
+    build: .
+    container_name: chatterbox-official-api
+    runtime: nvidia
+    ports:
+      - "4123:8000"
+    volumes:
+      - ./models:/root/.cache/huggingface
+      - ./voices:/voices
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
